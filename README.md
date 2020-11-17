@@ -9,7 +9,7 @@ This project implements a Smart Door authentication system integrated with live 
 |Application Architecture and Workflow|
 
 Every time a visitor shows up in front of the camera, the system would be able to depict her face and determine if the visitor is known or not. 
-- If the visitor is a known person, which means her face info already existed in the system, then she will receive an SMS message with a valid OTP passcode (expires in 5 minutes) and a web link that will lead her to the authentication webpage. Only when the visitor enters the right OTP before the expiration, then can she access the door (or the resource) and will receive a personalized greeting.
+- If the visitor is a known person, which means her face info already existed in the system, then she will receive an SMS message with a valid OTP passcode (expires in 5 minutes and can be only used once) and a web link that will lead her to the authentication webpage. Only when the visitor enters the right OTP before the expiration, then can she access the door (or the resource) and will receive a personalized greeting.
 - If the visitor is an unknown person, which means her face info doesn't exist in the system, then the owener will receive an SMS message with a web link that will lead to the visitor-control webpage, where the visitor's face image captured earlier would display and the owner can reference that image for the permission consideration. If the owner decides to approve the access permission for that visitor, then the owner should input & submit the visitor's name and phone number. After that, the system will send a personalized SMS message to the visitor using the given phone number. The message shares the same format as for the known visitor which includes the OTP passcode and the link to the same authentication webpage. Then, the visitor would finish the authentication work there and access the door (or the resource).
 
 ## Implementation Details
@@ -19,12 +19,14 @@ Every time a visitor shows up in front of the camera, the system would be able t
 2. Create a DynamoDB table `"passcodes"` (​DB1​) that stores temporary
 access codes to the virtual door and a reference to the visitor it was assigned to.
     - Use the TTL festure of DynamoDB to expire the records after 5 mintues.
+    - Use the extra column `used` to track if the OTP has been used.
     - The table records should apply the following schema:
         ```python
         {
             "passcode": otp,
             "faceId": faceId,
-            "ttl": int(time.time() + 5 * 60)
+            "ttl": int(time.time() + 5 * 60),
+            "used": False
         }
         ```
 3. Create a DynamoDB table `"visitors"` (​DB2​) that stores details info about the visitors that the Smart Door system is interacting with.
@@ -106,17 +108,19 @@ stream video for analysis.
         aws rekognition start-stream-processor --name RekognitionBridge --region us-east-1
         ```
     - The records output from KDS1 trigger a Lambda function (`LF1`). In `LF1`, only the record with the face detected would send a message to an SQS queue (`Faces`) that includes the detailed face info.
-    - The SQS queue `Faces` triggers another Lambda function (`LF2`). `LF2` would handle the following workflow regarding if the vissitor is a known person or unknown.
-        - For every known face detected by Rekognition, send an SMS message  to the visitor using the phone number recorded in the table `visitors`. The text message should include a 6-digit One-Time Passcode (OTP) that the visitor can use to open the virtual door (and store that OTP in the table `passcodes` giving 5 minutes expiration) and a web link for the authentication webpage (`WP2`). The workflow above could be implemented with another Lambda function (`LF3`) and triggered by an API Gateway.
+    - The SQS queue `Faces` triggers another Lambda function (`LF2`). `LF2` would handle the following workflow regarding if the visitor is a known person or unknown.
+        - For every known face detected by Rekognition, send an SMS message  to the visitor using the phone number recorded in the table `visitors`. The text message should include a 6-digit One-Time Passcode (OTP) that the visitor can use to open the virtual door (and store that OTP in the table `passcodes` giving 5 minutes expiration also with an extra column to track if the OTP has been used) and a web link for the authentication webpage (`WP2`). The authentication could be implemented with another Lambda function (`LF3`) and triggered by an API Gateway.
         - For every unknown face detected by Rekogniton, send an SMS to the owner that should include a web link to the visitor-control webpage (`WP1`) to approve the access for the visitor.
             - In the visiotr-control webpage, the visitor's face image captured earlier would display and the owner can reference that image for the permission consideration. If the owner decides to approve the access permission for that visitor, then the owner should input & submit the visitor's name and phone number via a web form.
             - Submitting this form should create a new record in the `visitors` table (​DB2​), indexed by the faceId identified by Rekognition. This workflow could be implemented with another Lambda function (`LF4`) and triggered by an API Gateway.
-            - Meanwhile, `LF4` would also generate a OTP for the vistor and store it in the `passcodes` table (​DB1​), with a 5 minute expiration timestamp.
+            - Meanwhile, `LF4` would also generate a OTP for the vistor and store it in the `passcodes` table (​DB1​), with a 5 minute expiration timestamp and an extra column to track if the OTP has been used.
             - `LF4` also triggers the SNS service to send an SMS message to the visitor using the given phone number. The message shares the same format as for the known visitor which includes the OTP passcode and the link to the same authentication webpage.
 
 ### Authentication
-1. For the authentication webpage (`WP2`) link sent to the visitor, a `faceId` parameter associated with this visitor would be included in the url. Only the faceId matches the input OTP and within the 5 minutes expiration timeslot, then can the visitor access the virtual door. And the webpage would present a personalized greeting message for the visitor.
-2. Input expired OTP or invalid OTP (not a 6-digit number), the webpage would present the relevant failure message.
+1. For the authentication webpage (`WP2`) link sent to the visitor, a `faceId` parameter associated with this visitor would be included in the url.
+2. Only the faceId matches the input OTP within the 5 minutes expiration timeslot and **it's the first time authentication using that OTP for this visitor**, then can the visitor access the virtual door. And the webpage would present a personalized greeting message for the visitor.
+3. If the visitor already used the received OTP to access the door once, then within 5 mintues, whenever she tries to reuse that OTP to unlock, it would fail (since that passcode has already been used). The webpage would present the relevant failure message and lead the visitor to request a new OTP.
+4. Input expired OTP or invalid OTP (not a 6-digit number), the webpage would present the relevant failure message.
 
 ### Tricky Parts
 1. How to handle hight throughput records generated by Rekognition?
