@@ -4,13 +4,15 @@ This project implements a Smart Door authentication system integrated with live 
 
 ## Workflow
 
-|![Application Architecture and Workflow](./images/smart-door-workflow.png)|
-|:--:|
-|Application Architecture and Workflow|
+A workflow demo video for this project: https://www.youtube.com/watch?v=4-1p9NsXqE0
 
 Every time a visitor shows up in front of the camera, the system would be able to depict her face and determine if the visitor is known or not. 
 - If the visitor is a known person, which means her face info already existed in the system, then she will receive an SMS message with a valid OTP passcode (expires in 5 minutes and can be only used once) and a web link that will lead her to the authentication webpage. Only when the visitor enters the right OTP before the expiration, then can she access the door (or the resource) and will receive a personalized greeting.
 - If the visitor is an unknown person, which means her face info doesn't exist in the system, then the owener will receive an SMS message with a web link that will lead to the visitor-control webpage, where the visitor's face image captured earlier would display and the owner can reference that image for the permission consideration. If the owner decides to approve the access permission for that visitor, then the owner should input & submit the visitor's name and phone number. After that, the system will send a personalized SMS message to the visitor using the given phone number. The message shares the same format as for the known visitor which includes the OTP passcode and the link to the same authentication webpage. Then, the visitor would finish the authentication work there and access the door (or the resource).
+
+|![Application Architecture and Workflow](./images/smart-door-workflow.png)|
+|:--:|
+|Application Architecture and Workflow|
 
 ## Implementation Details
 
