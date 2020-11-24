@@ -1,0 +1,20 @@
+{
+    "Name": "RekognitionBridge",
+    "Input": {
+           "KinesisVideoStream": {
+                  "Arn": "arn:aws:kinesisvideo:us-east-1:ACCOUNT_ID:stream/KVS1/SOME_NUMBER"
+           }
+    },
+    "Output": {
+           "KinesisDataStream": {
+                  "Arn": "arn:aws:kinesis:us-east-1:ACCOUNT_ID:stream/KDS1"
+           }
+    },
+    "RoleArn": "arn:aws:iam::ACCOUNT_ID:role/rekognition",
+    "Settings": {
+           "FaceSearch": {
+                  "CollectionId": "FaceCollection",
+                  "FaceMatchThreshold": 95.5
+           }
+    }
+}
