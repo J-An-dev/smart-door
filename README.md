@@ -4,7 +4,7 @@ This project implements a Smart Door authentication system integrated with live 
 
 ## Workflow
 
-A workflow demo video for this project: https://www.youtube.com/watch?v=4-1p9NsXqE0
+A workflow demo video for this project: https://www.youtube.com/watch?v=pYJfyCoSLLE
 
 Every time a visitor shows up in front of the camera, the system would be able to depict her face and determine if the visitor is known or not. 
 - If the visitor is a known person, which means her face info already existed in the system, then she will receive an SMS message with a valid OTP passcode (expires in 5 minutes and can be only used once) and a web link that will lead her to the authentication web page. Only when the visitor enters the right OTP before the expiration, then can she access the door (or the resource) and will receive a personalized greeting.
